@@ -84,11 +84,18 @@ public class DatabaseConnection {
                         id INT AUTO_INCREMENT PRIMARY KEY,
                         username VARCHAR(50) NOT NULL UNIQUE,
                         password VARCHAR(100) NOT NULL,
-                        role VARCHAR(20) NOT NULL DEFAULT 'STAFF',
-                        guest_id INT DEFAULT NULL,
-                        CONSTRAINT fk_user_guest FOREIGN KEY (guest_id) REFERENCES guests(id) ON DELETE SET NULL
+                        role VARCHAR(20) NOT NULL DEFAULT 'STAFF'
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                     """);
+
+            // Auto-migrate schema to add guest_id if not exists
+            try {
+                stmt.execute("ALTER TABLE users ADD COLUMN guest_id INT DEFAULT NULL");
+                stmt.execute(
+                        "ALTER TABLE users ADD CONSTRAINT fk_user_guest FOREIGN KEY (guest_id) REFERENCES guests(id) ON DELETE SET NULL");
+            } catch (SQLException ignored) {
+                // Column likely already exists, ignore
+            }
 
             stmt.execute("""
                     CREATE TABLE IF NOT EXISTS guests (

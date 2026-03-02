@@ -4,12 +4,12 @@ import com.oceanview.model.Reservation;
 import com.oceanview.service.DashboardService;
 import com.oceanview.service.ReservationService;
 
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +39,9 @@ public class DashboardServlet extends HttpServlet {
 
         if ("ADMIN".equals(role) || "STAFF".equals(role)) {
             // Load stats for Admin/Staff
-            Map<String, Object> stats = dashboardService.getDashboardStats();
+            Map<String, Object> stats = new java.util.HashMap<>();
+            stats.put("Total Revenue", dashboardService.getTotalRevenue());
+            stats.put("Occupied Rooms", dashboardService.getOccupiedRooms());
             request.setAttribute("stats", stats);
 
             // Just get recent reservations
