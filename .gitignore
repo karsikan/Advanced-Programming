@@ -1,0 +1,11 @@
+*.class
+*.jar
+*.war
+*.ear
+target/
+/hotel.db
+.DS_Store
+*.iml
+.idea/
+nbproject/
+*.log
