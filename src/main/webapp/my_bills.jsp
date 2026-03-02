@@ -7,6 +7,41 @@
             <meta charset="UTF-8">
             <title>Ocean View Resort - My Bills</title>
             <link rel="stylesheet" href="css/style.css">
+            <style>
+                .table-section {
+                    background: white;
+                    padding: 1.5rem;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                }
+
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 1rem;
+                }
+
+                th,
+                td {
+                    padding: 0.75rem;
+                    text-align: left;
+                    border-bottom: 1px solid var(--border-color);
+                }
+
+                th {
+                    background-color: var(--bg-page);
+                    color: var(--text-main);
+                    font-weight: 600;
+                }
+
+                .badge {
+                    padding: 0.2rem 0.5rem;
+                    border-radius: 4px;
+                    font-size: 0.8rem;
+                    color: white;
+                    display: inline-block;
+                }
+            </style>
         </head>
 
         <body>
@@ -24,18 +59,60 @@
 
             <div class="app-container">
                 <main class="app-content">
-                    <div class="card">
+                    <div class="table-section">
                         <h3
-                            style="margin-bottom: 1.5rem; color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">
-                            🧾 My Bills
+                            style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                            🧾 My Bills & Invoices
                         </h3>
-                        <div style="text-align: center; padding: 3rem;">
-                            <span style="font-size: 4rem;">🚧</span>
-                            <h2 style="color: var(--text-muted); margin-top: 1rem;">This feature is under development.
-                            </h2>
-                            <p style="color: var(--text-muted); margin-top: 0.5rem;">Please check back later as we
-                                complete the web migration!</p>
-                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Res ID</th>
+                                    <th>Room No.</th>
+                                    <th>Stay Dates</th>
+                                    <th>Total (LKR)</th>
+                                    <th>Payment Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <c:forEach var="r" items="${reservations}">
+                                    <tr>
+                                        <td><strong>
+                                                <c:out value="${r.reservationId}" />
+                                            </strong></td>
+                                        <td>
+                                            <c:out value="${r.roomNumber}" />
+                                        </td>
+                                        <td>
+                                            <c:out value="${r.checkInDate} to ${r.checkOutDate}" />
+                                        </td>
+                                        <td>
+                                            <c:out value="${r.totalAmount}" />
+                                        </td>
+                                        <td>
+                                            <span class="badge"
+                                                style="${r.status == 'CHECKED_OUT' ? 'background: #10B981;' : 'background: var(--text-muted);'}">
+                                                ${r.status == 'CHECKED_OUT' ? 'PAID' : 'PENDING'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="billing?action=search&reservationId=${r.reservationId}"
+                                                class="btn btn-primary"
+                                                style="padding: 0.3rem 0.5rem; font-size: 0.9em;">View Invoice</a>
+                                        </td>
+                                    </tr>
+                                </c:forEach>
+                                <c:if test="${empty reservations}">
+                                    <tr>
+                                        <td colspan="6"
+                                            style="text-align: center; padding: 2rem; color: var(--text-muted);">No
+                                            billing history available.</td>
+                                    </tr>
+                                </c:if>
+                            </tbody>
+                        </table>
                     </div>
                 </main>
             </div>

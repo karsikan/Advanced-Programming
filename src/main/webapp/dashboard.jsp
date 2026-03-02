@@ -30,22 +30,22 @@
 
                     <c:choose>
                         <c:when test="${sessionScope.role == 'ADMIN'}">
-                            <a href="user_management.jsp">👥 User Management</a>
-                            <a href="room_management.jsp">🛏️ Room Management</a>
-                            <a href="all_reservations.jsp">📋 All Reservations</a>
-                            <a href="revenue_reports.jsp">📈 Revenue Reports</a>
+                            <a href="users">👥 User Management</a>
+                            <a href="rooms">🛏️ Room Management</a>
+                            <a href="reservations?action=all">📋 All Reservations</a>
+                            <a href="reports">📈 Revenue Reports</a>
                         </c:when>
 
                         <c:when test="${sessionScope.role == 'STAFF'}">
-                            <a href="reservation_form.jsp">📝 New Reservation</a>
-                            <a href="search_guests.jsp">🔍 Search Guests</a>
-                            <a href="generate_bill.jsp">🧾 Generate Bill</a>
+                            <a href="reservations?action=new">📝 New Reservation</a>
+                            <a href="guests">🔍 Search Guests</a>
+                            <a href="billing">🧾 Generate Bill</a>
                         </c:when>
 
                         <c:when test="${sessionScope.role == 'CUSTOMER'}">
-                            <a href="book_room.jsp">🏨 Book a Room</a>
-                            <a href="my_reservations.jsp">📋 My Reservations</a>
-                            <a href="my_bills.jsp">🧾 My Bills</a>
+                            <a href="reservations?action=new">🏨 Book a Room</a>
+                            <a href="reservations?action=my">📋 My Reservations</a>
+                            <a href="billing?action=my-bills">🧾 My Bills</a>
                         </c:when>
                     </c:choose>
                 </aside>
