@@ -36,15 +36,15 @@ class ValidatorTest {
     @Test
     @DisplayName("Valid date format YYYY-MM-DD")
     void testValidDate() {
-        assertTrue(Validator.isValidDate("2025-05-20"));
+        assertTrue(Validator.isValidDate("2024-05-20"));
         assertTrue(Validator.isValidDate("2024-12-31"));
     }
 
     @Test
     @DisplayName("Invalid date formats")
     void testInvalidDate() {
-        assertFalse(Validator.isValidDate("20-05-2025")); // wrong format
-        assertFalse(Validator.isValidDate("2025/05/20")); // wrong separator
+        assertFalse(Validator.isValidDate("20-05-2024")); // wrong format
+        assertFalse(Validator.isValidDate("2024/05/20")); // wrong separator
         assertFalse(Validator.isValidDate("not-a-date"));
         assertFalse(Validator.isValidDate(null));
     }
@@ -52,17 +52,17 @@ class ValidatorTest {
     @Test
     @DisplayName("Calculate nights between dates")
     void testCalculateNights() {
-        assertEquals(3, DateUtil.calculateNights("2025-05-01", "2025-05-04"));
-        assertEquals(1, DateUtil.calculateNights("2025-12-31", "2026-01-01"));
-        assertEquals(0, DateUtil.calculateNights("2025-05-01", "2025-05-01"));
+        assertEquals(3, DateUtil.calculateNights("2024-05-01", "2024-05-04"));
+        assertEquals(1, DateUtil.calculateNights("2024-12-31", "2025-01-01"));
+        assertEquals(0, DateUtil.calculateNights("2024-05-01", "2024-05-01"));
     }
 
     @Test
     @DisplayName("Checkout date must be after check-in")
     void testCheckOutAfterCheckIn() {
-        assertTrue(DateUtil.isCheckOutAfterCheckIn("2025-05-01", "2025-05-05"));
-        assertFalse(DateUtil.isCheckOutAfterCheckIn("2025-05-05", "2025-05-01")); // reversed
-        assertFalse(DateUtil.isCheckOutAfterCheckIn("2025-05-01", "2025-05-01")); // same day
+        assertTrue(DateUtil.isCheckOutAfterCheckIn("2024-05-01", "2024-05-05"));
+        assertFalse(DateUtil.isCheckOutAfterCheckIn("2024-05-05", "2024-05-01")); // reversed
+        assertFalse(DateUtil.isCheckOutAfterCheckIn("2024-05-01", "2024-05-01")); // same day
     }
 
     @Test

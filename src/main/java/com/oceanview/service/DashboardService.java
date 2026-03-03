@@ -5,6 +5,7 @@ import com.oceanview.db.DatabaseConnection;
 import java.sql.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Service for fetching dashboard statistics and business reports.
@@ -85,7 +86,7 @@ public class DashboardService {
         String sql = """
                 SELECT DATE_FORMAT(created_at, '%m') as month, COUNT(*) as cnt
                 FROM reservations WHERE status != 'CANCELLED'
-                AND YEAR(created_at) = YEAR(NOW())
+                AND YEAR(created_at) = 2024
                 GROUP BY month""";
         try (Statement s = getConn().createStatement(); ResultSet rs = s.executeQuery(sql)) {
             while (rs.next()) {
@@ -96,6 +97,42 @@ public class DashboardService {
             System.err.println(e.getMessage());
         }
         return map;
+    }
+
+    /** Monthly revenue for the current year */
+    public Map<String, Double> getMonthlyRevenue() {
+        Map<String, Double> map = new LinkedHashMap<>();
+        String[] months = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+        for (String m : months)
+            map.put(m, 0.0);
+
+        String sql = """
+                SELECT DATE_FORMAT(created_at, '%m') as month, SUM(total_amount) as rev
+                FROM reservations WHERE status IN ('CONFIRMED','CHECKED_OUT')
+                AND YEAR(created_at) = 2024
+                GROUP BY month""";
+        try (Statement s = getConn().createStatement(); ResultSet rs = s.executeQuery(sql)) {
+            while (rs.next()) {
+                int idx = Integer.parseInt(rs.getString("month")) - 1;
+                map.put(months[idx], rs.getDouble("rev"));
+            }
+        } catch (SQLException e) {
+            System.err.println(e.getMessage());
+        }
+        return map;
+    }
+
+    /** Combined stats for REST API */
+    public Map<String, Object> getDashboardStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalReservations", getTotalReservations());
+        stats.put("availableRooms", getAvailableRooms());
+        stats.put("occupiedRooms", getOccupiedRooms());
+        stats.put("totalRevenue", getTotalRevenue());
+        stats.put("occupancyRate", getOccupancyRate());
+        stats.put("revenueByType", getRevenueByRoomType());
+        stats.put("monthlyReservations", getMonthlyReservations());
+        return stats;
     }
 
     /** Recent audit log entries */

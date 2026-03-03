@@ -77,7 +77,16 @@ public class AdminService {
         return success ? "SUCCESS" : "Failed to save user account.";
     }
 
-    public boolean deleteUser(int id) {
-        return userDAO.deleteUser(id);
+    public String deleteUser(int id, String currentUsername) {
+        User userToDelete = userDAO.getAllUsers().stream()
+                .filter(u -> u.getId() == id)
+                .findFirst()
+                .orElse(null);
+
+        if (userToDelete != null && userToDelete.getUsername().equals(currentUsername)) {
+            return "You cannot delete your own account while logged in.";
+        }
+
+        return userDAO.deleteUser(id) ? "SUCCESS" : "Failed to delete user account.";
     }
 }

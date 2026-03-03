@@ -20,12 +20,14 @@ public class ReservationService {
     private final GuestDAO guestDAO;
     private final RoomDAO roomDAO;
     private final BillingService billingService;
+    private final AvailabilityService availabilityService;
 
     public ReservationService() {
         this.reservationDAO = new ReservationDAO();
         this.guestDAO = new GuestDAO();
         this.roomDAO = new RoomDAO();
         this.billingService = new BillingService();
+        this.availabilityService = new AvailabilityService();
     }
 
     /**
@@ -34,7 +36,7 @@ public class ReservationService {
      * @return result message (success or validation error)
      */
     public String createReservation(String guestName, String address, String contact,
-            int roomId, String checkIn, String checkOut, Integer existingGuestId) {
+            int roomId, String checkIn, String checkOut, Integer userId) {
         // Validate inputs
         if (!Validator.isNotEmpty(guestName))
             return "Guest name is required.";
@@ -52,19 +54,17 @@ public class ReservationService {
         Room room = roomDAO.findById(roomId);
         if (room == null)
             return "Room not found.";
-        if (!"AVAILABLE".equals(room.getStatus()))
-            return "Room " + room.getRoomNumber() + " is not available.";
 
-        // Handle guest
-        int guestId;
-        if (existingGuestId != null && existingGuestId > 0) {
-            guestId = existingGuestId;
-        } else {
-            Guest guest = new Guest(guestName.trim(), address.trim(), contact.trim());
-            guestId = guestDAO.insertGuest(guest);
-            if (guestId == -1)
-                return "Failed to save guest details.";
+        // Intelligent Availability Check (Date overlap logic)
+        if (!availabilityService.isRoomAvailable(roomId, checkIn, checkOut)) {
+            return "Room " + room.getRoomNumber() + " is already booked for these dates.";
         }
+
+        // Create guest
+        Guest guest = new Guest(guestName.trim(), address.trim(), contact.trim());
+        int guestId = guestDAO.insertGuest(guest);
+        if (guestId == -1)
+            return "Failed to save guest details.";
 
         // Generate reservation ID
         String reservationId = generateReservationId();
@@ -75,10 +75,11 @@ public class ReservationService {
         String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         Reservation reservation = new Reservation(reservationId, guestId, roomId, checkIn, checkOut, now);
         reservation.setTotalAmount(total);
+        reservation.setUserId(userId);
 
-        boolean saved = reservationDAO.insertReservation(reservation);
-        if (!saved)
-            return "Failed to save reservation.";
+        String dbResult = reservationDAO.insertReservation(reservation);
+        if (!"SUCCESS".equals(dbResult))
+            return dbResult;
 
         // Mark room as OCCUPIED
         roomDAO.updateRoomStatus(roomId, "OCCUPIED");
@@ -95,8 +96,15 @@ public class ReservationService {
         return reservationDAO.getAllReservations();
     }
 
-    public List<Reservation> getReservationsByGuest(int guestId) {
-        return reservationDAO.findByGuestId(guestId);
+    public List<Reservation> getReservationsByUserId(int userId) {
+        return reservationDAO.getReservationsByUserId(userId);
+    }
+
+    /**
+     * For REST API, returns list without sensitive guest data if needed.
+     */
+    public List<Reservation> getAllSafeReservations() {
+        return reservationDAO.getAllReservations();
     }
 
     public List<Room> getAvailableRooms() {
@@ -107,15 +115,19 @@ public class ReservationService {
         return roomDAO.getAllRooms();
     }
 
-    public com.oceanview.model.Guest getGuestById(int id) {
-        return guestDAO.findById(id);
+    public boolean cancelReservation(String reservationId, int roomId) {
+        return reservationDAO.updateStatus(reservationId, "CANCELLED");
     }
 
-    public boolean cancelReservation(String reservationId, int roomId) {
-        boolean updated = reservationDAO.updateStatus(reservationId, "CANCELLED");
-        // NOTE: Room release is handled automatically by SQLite trigger
-        // trg_room_release_on_cancel
-        return updated;
+    /**
+     * Secure cancellation for Customers - verifies ownership.
+     */
+    public boolean cancelReservationForCustomer(String reservationId, int roomId, int userId) {
+        Reservation res = reservationDAO.findById(reservationId);
+        if (res != null && res.getUserId() != null && res.getUserId() == userId) {
+            return cancelReservation(reservationId, roomId);
+        }
+        return false;
     }
 
     /**
@@ -126,9 +138,37 @@ public class ReservationService {
         return reservationDAO.updateStatus(reservationId, "CHECKED_OUT");
     }
 
+    public boolean updateReservation(String reservationId, String checkIn, String checkOut) {
+        Reservation res = reservationDAO.findById(reservationId);
+        if (res == null)
+            return false;
+
+        if (!Validator.isValidDate(checkIn) || !Validator.isValidDate(checkOut))
+            return false;
+        if (!DateUtil.isCheckOutAfterCheckIn(checkIn, checkOut))
+            return false;
+
+        res.setCheckInDate(checkIn);
+        res.setCheckOutDate(checkOut);
+
+        long nights = DateUtil.calculateNights(checkIn, checkOut);
+        double total = billingService.calculateTotal(res.getRatePerNight(), nights);
+        res.setTotalAmount(total);
+
+        return reservationDAO.updateReservation(res);
+    }
+
+    public boolean deleteReservation(String reservationId) {
+        return reservationDAO.deleteReservation(reservationId);
+    }
+
     private String generateReservationId() {
         String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String rand = String.valueOf((int) (Math.random() * 9000) + 1000);
         return "OVR-" + date + "-" + rand;
+    }
+
+    public java.util.Map<String, Object> getCustomerStats(int userId) {
+        return reservationDAO.getStatsByUserId(userId);
     }
 }

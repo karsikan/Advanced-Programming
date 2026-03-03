@@ -8,17 +8,17 @@ import java.sql.Statement;
 /**
  * Singleton Design Pattern – ensures only ONE database connection exists.
  *
- * Database: MySQL (via phpMyAdmin / XAMPP)
+ * Database: MySQL (via phpMyAdmin / WAMP)
  * Advanced Features:
  * - MySQL TRIGGERS for automated business rule enforcement
  * - Audit log table for change tracking
  * - Database VIEW for reporting
  *
- * ===== CONFIGURATION =====
+ * ===== CONFIGURATION (WAMP Default) =====
  * DB Host : localhost:3306
  * DB Name : oceanview_db
  * DB User : root
- * DB Pass : (empty for XAMPP default)
+ * DB Pass : (empty for WAMP default)
  * =========================
  */
 public class DatabaseConnection {
@@ -51,7 +51,8 @@ public class DatabaseConnection {
         } catch (SQLException e) {
             throw new RuntimeException(
                     "Cannot connect to MySQL.\n" +
-                            "Make sure XAMPP/MySQL is running and database 'oceanview_db' is accessible.\n" +
+                            "Make sure WAMP Server is running, MySQL is started on port 3306,\n" +
+                            "and database 'oceanview_db' is created in phpMyAdmin.\n" +
                             "Error: " + e.getMessage(),
                     e);
         }
@@ -79,23 +80,26 @@ public class DatabaseConnection {
         try (Statement stmt = connection.createStatement()) {
 
             // ── TABLES ────────────────────────────────────────────────────────
+            // users table now includes personal details and status/created_at for auditing
             stmt.execute("""
                     CREATE TABLE IF NOT EXISTS users (
                         id INT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(100),
                         username VARCHAR(50) NOT NULL UNIQUE,
+                        email VARCHAR(100),
+                        phone VARCHAR(15),
                         password VARCHAR(100) NOT NULL,
-                        role VARCHAR(20) NOT NULL DEFAULT 'STAFF'
+                        role VARCHAR(20) NOT NULL DEFAULT 'STAFF',
+                        status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                     """);
-
-            // Auto-migrate schema to add guest_id if not exists
-            try {
-                stmt.execute("ALTER TABLE users ADD COLUMN guest_id INT DEFAULT NULL");
-                stmt.execute(
-                        "ALTER TABLE users ADD CONSTRAINT fk_user_guest FOREIGN KEY (guest_id) REFERENCES guests(id) ON DELETE SET NULL");
-            } catch (SQLException ignored) {
-                // Column likely already exists, ignore
-            }
+            // make sure any older installations acquire new columns
+            try { stmt.execute("ALTER TABLE users ADD COLUMN name VARCHAR(100)"); } catch (SQLException ignored) {}
+            try { stmt.execute("ALTER TABLE users ADD COLUMN email VARCHAR(100)"); } catch (SQLException ignored) {}
+            try { stmt.execute("ALTER TABLE users ADD COLUMN phone VARCHAR(15)"); } catch (SQLException ignored) {}
+            try { stmt.execute("ALTER TABLE users ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'"); } catch (SQLException ignored) {}
+            try { stmt.execute("ALTER TABLE users ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"); } catch (SQLException ignored) {}
 
             stmt.execute("""
                     CREATE TABLE IF NOT EXISTS guests (
@@ -120,6 +124,7 @@ public class DatabaseConnection {
                     CREATE TABLE IF NOT EXISTS reservations (
                         reservation_id VARCHAR(30) PRIMARY KEY,
                         guest_id INT NOT NULL,
+                        user_id INT,
                         room_id INT NOT NULL,
                         check_in_date DATE NOT NULL,
                         check_out_date DATE NOT NULL,
@@ -127,9 +132,24 @@ public class DatabaseConnection {
                         status VARCHAR(20) NOT NULL DEFAULT 'CONFIRMED',
                         created_at DATETIME NOT NULL,
                         FOREIGN KEY (guest_id) REFERENCES guests(id),
-                        FOREIGN KEY (room_id)  REFERENCES rooms(id)
+                        FOREIGN KEY (room_id)  REFERENCES rooms(id),
+                        FOREIGN KEY (user_id)  REFERENCES users(id)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                     """);
+
+            // Migration: Add user_id column if it doesn't exist
+            try {
+                stmt.execute("ALTER TABLE reservations ADD COLUMN user_id INT AFTER guest_id");
+            } catch (SQLException e) {
+                // Ignore if column already exists
+            }
+
+            try {
+                stmt.execute(
+                        "ALTER TABLE reservations ADD CONSTRAINT fk_reservation_user FOREIGN KEY (user_id) REFERENCES users(id)");
+            } catch (SQLException e) {
+                // Ignore if constraint already exists or column wasn't added
+            }
 
             // Audit log table – tracks all system state changes
             stmt.execute("""
@@ -225,12 +245,17 @@ public class DatabaseConnection {
                     """);
 
             // ── SEED DATA ──────────────────────────────────────────────────────
-            stmt.execute("""
-                    INSERT IGNORE INTO users (username, password, role) VALUES
-                    ('admin',   'admin123',   'ADMIN'),
-                    ('staff',   'staff123',   'STAFF'),
-                    ('manager', 'manager123', 'ADMIN')
-                    """);
+            // seed default accounts with hashed passwords
+            String adminHash = org.mindrot.jbcrypt.BCrypt.hashpw("admin123", org.mindrot.jbcrypt.BCrypt.gensalt());
+            String staffHash = org.mindrot.jbcrypt.BCrypt.hashpw("staff123", org.mindrot.jbcrypt.BCrypt.gensalt());
+            String managerHash = org.mindrot.jbcrypt.BCrypt.hashpw("manager123", org.mindrot.jbcrypt.BCrypt.gensalt());
+            String customerHash = org.mindrot.jbcrypt.BCrypt.hashpw("customer123", org.mindrot.jbcrypt.BCrypt.gensalt());
+            String seedSql = "INSERT IGNORE INTO users (username, password, role, name, status) VALUES "
+                    + "('admin','" + adminHash + "','ADMIN','Administrator','ACTIVE')," 
+                    + "('staff','" + staffHash + "','STAFF','Frontdesk Staff','ACTIVE')," 
+                    + "('manager','" + managerHash + "','ADMIN','General Manager','ACTIVE')," 
+                    + "('customer','" + customerHash + "','CUSTOMER','Demo Customer','ACTIVE')";
+            stmt.execute(seedSql);
 
             stmt.execute("""
                     INSERT IGNORE INTO rooms (room_number, room_type, rate_per_night) VALUES

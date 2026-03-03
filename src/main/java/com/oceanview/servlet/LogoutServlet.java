@@ -1,4 +1,4 @@
-package com.oceanview.controller;
+package com.oceanview.servlet;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -10,13 +10,14 @@ import java.io.IOException;
 
 @WebServlet("/logout")
 public class LogoutServlet extends HttpServlet {
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         HttpSession session = request.getSession(false);
         if (session != null) {
-            session.invalidate();
+            session.invalidate(); // Destroy the session
         }
-        response.sendRedirect("login.jsp");
+        response.sendRedirect(request.getContextPath() + "/login");
     }
 }

@@ -1,208 +1,231 @@
-﻿<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-    <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-        <!DOCTYPE html>
-        <html>
-
-        <head>
-            <meta charset="UTF-8">
-            <title>Ocean View Resort - User Management</title>
-            <link rel="stylesheet" href="css/style.css">
-            <style>
-                .management-container {
-                    display: flex;
-                    gap: 2rem;
-                    align-items: flex-start;
+﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ taglib uri="jakarta.tags.core" prefix="c" %>
+<% 
+    if (session.getAttribute("loggedInUser") == null || !"ADMIN".equals(session.getAttribute("loggedInRole"))) {
+        response.sendRedirect(request.getContextPath() + "/login");
+        return;
+    }
+%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Ocean View Resort</title>
+    <script src="https://cdn.tailwindcss.com/3.4.1"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f0fdf4', 500: '#10b981', 700: '#047857', 900: '#064e3b' },
+                        admin: { 50: '#fef2f2', 500: '#ef4444', 700: '#b91c1c', 900: '#7f1d1d' }
+                    }
                 }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .admin-gradient {
+            background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden text-gray-800">
 
-                .form-section {
-                    flex: 1;
-                    background: white;
-                    padding: 1.5rem;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                }
+    <jsp:include page="/WEB-INF/components/sidebar.jsp" />
 
-                .table-section {
-                    flex: 2;
-                    background: white;
-                    padding: 1.5rem;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                }
-
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 1rem;
-                }
-
-                th,
-                td {
-                    padding: 0.75rem;
-                    text-align: left;
-                    border-bottom: 1px solid var(--border-color);
-                }
-
-                th {
-                    background-color: var(--bg-page);
-                    color: var(--text-main);
-                    font-weight: 600;
-                }
-
-                .btn-small {
-                    padding: 0.25rem 0.5rem;
-                    font-size: 0.875rem;
-                    margin-right: 0.25rem;
-                }
-
-                .action-links a {
-                    text-decoration: none;
-                    color: white;
-                }
-            </style>
-        </head>
-
-        <body>
-            <header class="app-header">
-                <h2>🌊 OCEAN VIEW RESORT</h2>
-                <div>
-                    <span style="margin-right: 1rem;">👤 Welcome, <strong>${sessionScope.username}</strong>
-                        (${sessionScope.role})</span>
-                    <a href="dashboard" class="btn btn-primary" style="padding: 0.5rem 1rem; width: auto;">🔙 Back to
-                        Dashboard</a>
-                    <a href="logout" class="btn btn-primary"
-                        style="padding: 0.5rem 1rem; width: auto; background-color: var(--danger);">🚪 Logout</a>
-                </div>
-            </header>
-
-            <div class="app-container">
-                <!-- Render Sidebar if needed, or directly content -->
-                <main class="app-content">
-
-                    <c:if test="${not empty param.success}">
-                        <div
-                            style="background-color: #D1FAE5; color: #065F46; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
-                            ✅ ${param.success}
-                        </div>
-                    </c:if>
-                    <c:if test="${not empty param.error}">
-                        <div
-                            style="background-color: #FEE2E2; color: #991B1B; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
-                            ❌ ${param.error}
-                        </div>
-                    </c:if>
-
-                    <div class="management-container">
-
-                        <!-- Form Section -->
-                        <div class="form-section">
-                            <h3
-                                style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">
-                                <c:choose>
-                                    <c:when test="${user != null}">Edit User</c:when>
-                                    <c:otherwise>Add New User</c:otherwise>
-                                </c:choose>
-                            </h3>
-
-                            <form action="users" method="post">
-                                <c:if test="${user != null}">
-                                    <input type="hidden" name="action" value="update">
-                                    <input type="hidden" name="id" value="${user.id}">
-                                </c:if>
-                                <c:if test="${user == null}">
-                                    <input type="hidden" name="action" value="add">
-                                </c:if>
-
-                                <div class="form-group">
-                                    <label>Username:</label>
-                                    <input type="text" name="username" class="form-control"
-                                        value="<c:out value='${user.username}' />" required ${user !=null ? 'readonly'
-                                        : '' } />
-                                    <c:if test="${user != null}">
-                                        <small style="color: var(--text-muted);">Username cannot be changed.</small>
-                                    </c:if>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Password:</label>
-                                    <input type="text" name="password" class="form-control"
-                                        value="<c:out value='${user.password}' />" required />
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Role:</label>
-                                    <select name="role" class="form-control" required>
-                                        <option value="STAFF" ${user !=null && user.role=='STAFF' ? 'selected' : '' }>
-                                            Staff</option>
-                                        <option value="ADMIN" ${user !=null && user.role=='ADMIN' ? 'selected' : '' }>
-                                            Admin</option>
-                                    </select>
-                                </div>
-
-                                <button type="submit" class="btn btn-primary" style="width: 100%;">
-                                    ${user != null ? 'Update User' : 'Add User'}
-                                </button>
-
-                                <c:if test="${user != null}">
-                                    <a href="users" class="btn"
-                                        style="display: block; text-align: center; margin-top: 0.5rem; background: var(--bg-page); color: var(--text-main);">Cancel
-                                        Edit</a>
-                                </c:if>
-                            </form>
-                        </div>
-
-                        <!-- Table Section -->
-                        <div class="table-section">
-                            <h3
-                                style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">
-                                👥 User List
-                            </h3>
-
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Username</th>
-                                        <th>Role</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <c:forEach var="u" items="${listUser}">
-                                        <tr>
-                                            <td>
-                                                <c:out value="${u.id}" />
-                                            </td>
-                                            <td>
-                                                <c:out value="${u.username}" />
-                                            </td>
-                                            <td>
-                                                <span class="badge"
-                                                    style="${u.role == 'ADMIN' ? 'background: var(--danger);' : 'background: var(--primary-light);'} color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
-                                                    <c:out value="${u.role}" />
-                                                </span>
-                                            </td>
-                                            <td class="action-links">
-                                                <a href="users?action=edit&username=<c:out value='${u.username}' />"
-                                                    class="btn btn-small btn-primary"
-                                                    style="background: var(--accent-color); color: #000;">✎ Edit</a>
-                                                <c:if test="${u.username != sessionScope.username}">
-                                                    <a href="users?action=delete&id=<c:out value='${u.id}' />"
-                                                        class="btn btn-small btn-primary"
-                                                        style="background: var(--danger);"
-                                                        onclick="return confirm('Are you sure you want to delete this user?');">🗑
-                                                        Delete</a>
-                                                </c:if>
-                                            </td>
-                                        </tr>
-                                    </c:forEach>
-                                </tbody>
-                            </table>
-                        </div>
-
-                    </div>
-                </main>
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Header -->
+        <header class="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-200 py-4 px-8 flex justify-between items-center z-10">
+            <div>
+                <h2 class="text-2xl font-black text-gray-900 tracking-tighter flex items-center">
+                    <i class="fas fa-users-cog text-admin-600 mr-3"></i> User Control Center
+                </h2>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Manage staff access and permissions</p>
             </div>
-        </body>
+            <button onclick="openModal('add')"
+                class="admin-gradient hover:opacity-90 text-white font-black py-2.5 px-6 rounded-xl shadow-lg shadow-admin-500/20 transition-all text-xs flex items-center uppercase tracking-wider">
+                <i class="fas fa-user-plus mr-2"></i> Create New User
+            </button>
+        </header>
 
-        </html>
+        <main class="flex-1 overflow-auto bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] p-8">
+
+            <div class="max-w-5xl mx-auto">
+                <!-- User Table Card -->
+                <div class="glass rounded-[2.5rem] shadow-2xl shadow-gray-200/50 overflow-hidden border border-white">
+                    <table class="min-w-full divide-y divide-gray-100">
+                        <thead class="bg-gray-50/50">
+                            <tr>
+                                <th class="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Profile</th>
+                                <th class="px-8 py-5 text-center text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Permission Level</th>
+                                <th class="px-8 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Management Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50 bg-white/50">
+                            <c:forEach var="u" items="${usersList}">
+                                <tr class="hover:bg-brand-50/30 transition-colors group">
+                                    <td class="px-8 py-6 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 rounded-full admin-gradient flex items-center justify-center text-white font-black text-xs shadow-md shadow-admin-500/20 mr-4">
+                                                ${u.username.substring(0, 1).toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <div class="text-sm font-black text-gray-900">${u.username}</div>
+                                                <c:if test="${u.username == sessionScope.loggedInUser}">
+                                                    <span class="text-[9px] font-black text-brand-600 uppercase bg-brand-50 px-1.5 py-0.5 rounded-md tracking-tighter">Current Session</span>
+                                                </c:if>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-8 py-6 whitespace-nowrap text-center">
+                                        <span class="px-4 py-1.5 inline-flex text-[10px] leading-5 font-black rounded-xl uppercase tracking-widest
+                                            ${u.role == 'ADMIN' ? 'bg-admin-50 text-admin-700 border border-admin-100' : 'bg-blue-50 text-blue-700 border border-blue-100'}">
+                                            <i class="fas ${u.role == 'ADMIN' ? 'fa-crown' : 'fa-user-tag'} mr-2"></i> ${u.role}
+                                        </span>
+                                    </td>
+                                    <td class="px-8 py-6 whitespace-nowrap text-right text-sm">
+                                        <div class="flex justify-end space-x-2">
+                                            <button onclick="openModal('edit', '${u.id}', '${u.username}', '${u.role}')"
+                                                class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm hover:bg-blue-600 hover:text-white transition-all transform hover:-translate-y-0.5"
+                                                title="Edit Permissions">
+                                                <i class="fas fa-pencil-alt text-xs"></i>
+                                            </button>
+
+                                            <c:if test="${u.username != sessionScope.loggedInUser}">
+                                                <form action="${pageContext.request.contextPath}/users" method="POST" class="inline"
+                                                    onsubmit="return confirm('CRITICAL: Are you sure you want to revoke access for ${u.username}?');">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="userId" value="${u.id}">
+                                                    <button type="submit"
+                                                        class="w-10 h-10 rounded-xl bg-admin-50 text-admin-600 flex items-center justify-center shadow-sm hover:bg-admin-600 hover:text-white transition-all transform hover:-translate-y-0.5"
+                                                        title="Revoke Access">
+                                                        <i class="fas fa-trash-alt text-xs"></i>
+                                                    </button>
+                                                </form>
+                                            </c:if>
+                                            <c:if test="${u.username == sessionScope.loggedInUser}">
+                                                <div class="w-10 h-10 rounded-xl bg-gray-50 text-gray-300 flex items-center justify-center cursor-not-allowed" title="Security Locked">
+                                                    <i class="fas fa-lock text-xs"></i>
+                                                </div>
+                                            </c:if>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </c:forEach>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="userModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-md hidden flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+        <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100 border border-white">
+            <div class="px-8 py-6 admin-gradient relative overflow-hidden">
+                <i class="fas fa-users-cog absolute -right-4 -bottom-4 text-7xl text-white/10 rotate-12"></i>
+                <h3 id="modalTitle" class="text-xl font-black text-white tracking-tighter">Identity Management</h3>
+                <p class="text-[10px] font-bold text-white/60 uppercase tracking-widest mt-1">Configure user access credentials</p>
+            </div>
+            
+            <form action="${pageContext.request.contextPath}/users" method="POST" class="p-8 space-y-6">
+                <input type="hidden" name="action" id="modalAction" value="add">
+                <input type="hidden" name="userId" id="modalUserId" value="">
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Account Username</label>
+                        <div class="relative">
+                            <i class="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" name="username" id="modalUsername" required
+                                class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl shadow-inner focus:ring-2 focus:ring-admin-500 focus:bg-white transition-all text-sm font-bold">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Secure Password</label>
+                        <div class="relative">
+                            <i class="fas fa-key absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="password" name="password" id="modalPassword"
+                                class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl shadow-inner focus:ring-2 focus:ring-admin-500 focus:bg-white transition-all text-sm font-bold"
+                                placeholder="••••••••">
+                        </div>
+                        <p class="text-[9px] text-gray-400 mt-2 ml-1 italic" id="pwHint">Leave empty to keep current password in Edit mode.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Authorization Tier</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="relative block cursor-pointer">
+                                <input type="radio" name="role" value="STAFF" id="roleStaff" class="peer sr-only" checked>
+                                <div class="px-4 py-3 rounded-2xl border-2 border-gray-100 bg-gray-50 text-center peer-checked:border-admin-500 peer-checked:bg-admin-50 peer-checked:text-admin-700 transition-all">
+                                    <i class="fas fa-user-tag text-xs mb-1 block"></i>
+                                    <span class="text-[10px] font-black uppercase tracking-wider">Staff</span>
+                                </div>
+                            </label>
+                            <label class="relative block cursor-pointer">
+                                <input type="radio" name="role" value="ADMIN" id="roleAdmin" class="peer sr-only">
+                                <div class="px-4 py-3 rounded-2xl border-2 border-gray-100 bg-gray-50 text-center peer-checked:border-admin-500 peer-checked:bg-admin-50 peer-checked:text-admin-700 transition-all">
+                                    <i class="fas fa-crown text-xs mb-1 block"></i>
+                                    <span class="text-[10px] font-black uppercase tracking-wider">Admin</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex space-x-3">
+                    <button type="button" onclick="closeModal()"
+                        class="flex-1 px-6 py-3 border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:bg-gray-50 transition-all">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="flex-1 admin-gradient px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-admin-500/30 hover:shadow-admin-500/50 transition-all">
+                        Commit Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openModal(mode, id = '', username = '', role = 'STAFF') {
+            document.getElementById('modalAction').value = mode;
+            document.getElementById('modalTitle').innerText = mode === 'add' ? 'Provision Account' : 'Identity Override';
+            document.getElementById('modalUserId').value = id;
+            document.getElementById('modalUsername').value = username;
+            
+            if (role === 'ADMIN') {
+                document.getElementById('roleAdmin').checked = true;
+            } else {
+                document.getElementById('roleStaff').checked = true;
+            }
+
+            const pwInput = document.getElementById('modalPassword');
+            const pwHint = document.getElementById('pwHint');
+            if (mode === 'add') {
+                pwInput.required = true;
+                pwHint.style.display = 'none';
+            } else {
+                pwInput.required = false;
+                pwHint.style.display = 'block';
+            }
+
+            document.getElementById('userModal').classList.remove('hidden');
+            document.getElementById('userModal').classList.add('flex');
+        }
+        function closeModal() {
+            document.getElementById('userModal').classList.add('hidden');
+            document.getElementById('userModal').classList.remove('flex');
+        }
+    </script>
+</body>
+</html>
